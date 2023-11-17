@@ -1,8 +1,12 @@
 import time
+import json
+import csv
+data = None
+result = None
 def print_slow(text):
     for char in text:
         print(char, end='', flush=True)
-        time.sleep(0.04)
+        time.sleep(0.01)
     print()
 
 def print_fast(text):
@@ -28,6 +32,40 @@ def get_choice(options):
         choice = input("Выберите вариант (введите номер): ")
     return choice
 
+def save_game(data):
+    global username
+    data = {'Username': username,'result': data}
+    with open('save.json', 'w', encoding='cp1251') as file:
+        json.dump(data, file, indent=4)
+
+def load_game(data, username):
+    try:
+        with open('save.json', 'r', encoding='cp1251') as file:
+            data = json.load(file)
+            return data['result'] if 'result' in data and data['Username'] == username else None
+    except:
+        return None
+
+def delete_save():
+    try:
+        with open('save.json', 'w') as file:
+            file.write('')
+        print("Сохранение удалено.")
+    except FileNotFoundError:
+        print("Сохранение не найдено.")
+
+def write_to_csv(data):
+    global username
+    heads = ['Username','result']
+    try:
+        with open('save.csv', 'x', encoding='cp1251', newline='') as ending:
+            ending = csv.DictWriter(ending, fieldnames= heads, delimeter=';')
+            ending.writeheader()
+    except:
+        pass
+    with open('save.csv', 'a', encoding='cp1251', newline='')as ending:
+        ending = csv.DictWriter(ending, fieldnames=heads )
+        ending.writerow({'Username': username,'result': data})
 
 def firstGlava():
     print_part(glava1Initialize,False)
@@ -87,10 +125,10 @@ def secondGlava(result):
        elif choice == '2':
            print_part(TempleButton2, True)
            return 4
-def thirdGlava(result2):
-    if result2 ==3:
+def thirdGlava(result):
+    if result ==3:
         print_part(ForestHodEnd3, True)
-    if result2 ==4:
+    if result ==4:
         print_part(Templeaftermech, True)
         choice = get_choice(['1', '2', '3'])
         if choice == '1':
@@ -259,10 +297,47 @@ SecretEnd = [
     "Секретная концовка!"
 ]
 
-print_slow("Вы - Владимир, молодой археолог, который обнаружил старинный амулет, открывающий путь в другие миры.")
-print_slow("После того, как вы нажали на амулет, вы оказались в загадочном мире.")
-result = firstGlava()
 
-result2 = secondGlava(result)
+def game(data, result, username):
+    print_slow("Вы - Владимир, молодой археолог, который обнаружил старинный амулет, открывающий путь в другие миры.")
+    print_slow("После того, как вы нажали на амулет, вы оказались в загадочном мире.")
 
-thirdGlava()
+    loaded_data = load_game(data)
+    username = input("Введите имя пользователя: ")
+
+    try:
+        if username in loaded_data:
+            print("Найдено сохранение для данного пользователя.")
+            choice = input("Хотите загрузить сохранение? (y/n): ")
+            if choice.lower() == 'y':
+                result = loaded_data['result']
+            else:
+                result = firstGlava()
+                save_game(result)
+        else:
+            result = firstGlava()
+            save_game(result)
+
+    except Exception as e:
+        print(f"Произошла ошибка: {e}")
+        result = firstGlava()
+        save_game(result)
+
+    if result == 1:
+        result = secondGlava(result)
+    elif result == 2:
+        result = secondGlava(result)
+    elif result == 3:
+        thirdGlava(result)
+    elif result == 4:
+        thirdGlava(result)
+
+    save_game(result)
+    write_to_csv(data)
+choicetwo = input("Введите команду (Начать/Удалить сохранение): ")
+if choicetwo.lower() == 'начать':
+    game(data, result, username)
+elif choicetwo.lower() == 'удалить сохранение':
+    delete_save()
+else:
+    print("Неверная команда.")
